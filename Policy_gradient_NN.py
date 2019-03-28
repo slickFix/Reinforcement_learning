@@ -37,8 +37,6 @@ def initialize_var(no_inputs,neurons_per_layer_li):
       
     return parameters
         
-    
-
 def forward_prop(x_ph,parameters):
     
     weights = [ val for val in sorted(parameters.keys()) if 'w' in val ]
@@ -57,7 +55,14 @@ def forward_prop(x_ph,parameters):
     
     return logits
 
-def neural_net_policy(no_inputs):
+def cost_optimizer(y,logits,lr):
+    
+    cost = tf.nn.sigmoid_cross_entropy_with_logits(labels=y,logits=logits)
+    optimizer = tf.train.AdamOptimizer(learning_rate=lr)
+    
+    return cost,optimizer
+    
+def neural_net_policy(no_inputs,neurons_per_layer_li,lr):
     
     
     # defining placeholders
@@ -69,7 +74,21 @@ def neural_net_policy(no_inputs):
     # defining forward propagation
     logits = forward_prop(x_ph,parameters)
     
-     
+    # defining actions and y_labels
+    output = tf.sigmoid(logits)    
+    p_left_right = tf.concat([output,1-output],axis=1)
+    actions = tf.multinomial(tf.log(p_left_right),num_samples=1) 
+    
+        #if we have output close to 1 => p_left is higher hence action will be 0(index) we reverse this in below code
+    y = 1-tf.to_float(actions) # we use (1-actions) because output measures the prob of left action
+    
+    # defining cost and optimizer
+    cost,optimizer = cost_optimizer(y,logits,lr)
+    
+    # defining gradients
+    grads_vars = optimizer.compute_gradients(cost)
+    
+    
 
 if __name__ == '__main__':
     
