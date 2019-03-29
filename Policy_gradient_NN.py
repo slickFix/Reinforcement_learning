@@ -29,18 +29,18 @@ def initialize_var(no_inputs,neurons_per_hidderlayer_li):
     with tf.variable_scope('Bias'):
         for idx,neurons in enumerate(neurons_per_hidderlayer_li,1):
             if idx == 1:
-                parameters["b"+str(idx)] = tf.Variable(np.zeros([no_inputs,neurons]),dtype = tf.float32,name = 'b'+str(idx))
+                parameters["b"+str(idx)] = tf.Variable(np.zeros(neurons),dtype = tf.float32,name = 'b'+str(idx))
             else:
-                parameters["b"+str(idx)] = tf.Variable(np.zeros([neurons_per_hidderlayer_li[idx-2],neurons]),dtype = tf.float32,name = 'b'+str(idx))
+                parameters["b"+str(idx)] = tf.Variable(np.zeros(neurons),dtype = tf.float32,name = 'b'+str(idx))
         
-        parameters["b"+str(idx+1)] = tf.Variable(np.zeros([neurons_per_hidderlayer_li[idx-1],1]),dtype = tf.float32,name = 'b'+str(idx+1))
+        parameters["b"+str(idx+1)] = tf.Variable(np.zeros(1),dtype = tf.float32,name = 'b'+str(idx+1))
       
     return parameters
         
 def forward_prop(x_ph,parameters):
     
-    weights = [ val for val in sorted(parameters.keys()) if 'w' in val ]
-    bias = [ val for val in sorted(parameters.keys()) if 'b' in val ]
+    weights = [ parameters[val] for val in sorted(parameters.keys()) if 'w' in val ]
+    bias = [ parameters[val] for val in sorted(parameters.keys()) if 'b' in val ]
     
     
     layers = {}
@@ -52,7 +52,7 @@ def forward_prop(x_ph,parameters):
             elif idx!=len(weights):
                 layers['layer'+str(idx)] = tf.nn.elu(tf.add(tf.matmul(layers['layer'+str(idx-1)],w),b))
         logits = tf.add(tf.matmul(layers['layer'+str(idx-1)],weights[-1]),bias[-1])
-    
+
     return logits
 
 def cost_optimizer(y,logits,lr):
@@ -64,6 +64,7 @@ def cost_optimizer(y,logits,lr):
     
 def neural_net_policy(no_inputs,neurons_per_hiddenlayer_li,lr):
     
+    tf.reset_default_graph()
     
     # defining placeholders
     x_ph = tf.placeholder(tf.float32,shape=[None,no_inputs],name = 'x_ph')
@@ -92,14 +93,16 @@ def neural_net_policy(no_inputs,neurons_per_hiddenlayer_li,lr):
     # creating gradients placeholder
     grads_vars_feed = []
     gradient_placeholders = []
+    
     for grad,var in grads_vars:
-        grad_placeholder = tf.placeholder(tf.float32,shape=grad.get_shape())
+        
+        grad_placeholder = tf.placeholder(tf.float32,shape=var.get_shape())
         gradient_placeholders.append(grad_placeholder)
         grads_vars_feed.append((grad_placeholder,var))
         
     training_op = optimizer.apply_gradients(grads_vars_feed)
     
-    return action,gradients,gradient_placeholders,training_op
+    return action,gradients,gradient_placeholders,training_op,x_ph
 
 
 def discounted_rewards(epi_rewards,discount_rate):
@@ -137,7 +140,11 @@ if __name__ == '__main__':
     no_inputs = len(env.reset())
     neurons_per_hiddenlayer_li = [4]
     
-    action,gradients,gradient_placeholders,training_op = neural_net_policy(no_inputs,neurons_per_hiddenlayer_li,learning_rate)
+    action,gradients,gradient_placeholders,training_op,x_ph = neural_net_policy(no_inputs,neurons_per_hiddenlayer_li,learning_rate)
+    
+    #print("grads and vars".center(50,'-'))
+    #print(grads_vars)
+    
     
     # defining cartpole game parameters
     no_training_epochs = 250
@@ -147,6 +154,7 @@ if __name__ == '__main__':
     discount_rate = 0.95
     
     with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
         for epoch in range(no_training_epochs):
             all_rewards = []
             all_gradients = []
@@ -157,8 +165,9 @@ if __name__ == '__main__':
                 obs = env.reset()
                 
                 for step in range(max_steps_per_episode):                
-                    ac,gr = sess.run([action,gradients],feed_dict=obs.reshape((1,len(obs))))                    
+                    ac,gr = sess.run([action,gradients],feed_dict={x_ph:obs.reshape(1,len(obs))})                    
                     obs,reward,done,info = env.step(ac)
+                    env.render()
                     
                     current_rewards.append(reward)
                     current_gradients.append(gr)
