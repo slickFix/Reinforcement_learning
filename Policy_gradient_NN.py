@@ -99,28 +99,28 @@ def neural_net_policy(no_inputs,neurons_per_hiddenlayer_li,lr):
         grad_placeholder = tf.placeholder(tf.float32,shape=var.get_shape())
         gradient_placeholders.append(grad_placeholder)
         grads_vars_feed.append((grad_placeholder,var))
-        
+    
+    
     training_op = optimizer.apply_gradients(grads_vars_feed)
     
     return action,gradients,gradient_placeholders,training_op,x_ph
 
 
 def discounted_rewards(epi_rewards,discount_rate):
-    dis_epi_reward = []
+    dis_epi_reward = np.empty(len(epi_rewards))
     cumul_reward = 0 
     
-    for reward in reversed(epi_rewards):
+    for step in reversed(range(len(epi_rewards))):
         cumul_reward = reward + cumul_reward *  discount_rate
-        dis_epi_reward.append(cumul_reward)
+        dis_epi_reward[step] = cumul_reward
        
-    return reversed(dis_epi_reward)
+    return dis_epi_reward
         
 def normalize_rewards(all_rewards,discount_rate):
     
     all_dis_rewards = []
-    for epi_rewards in all_rewards:
-        dis_rewards = discounted_rewards(epi_rewards,discount_rate)
-        all_dis_rewards.append(dis_rewards)
+    for epi_rewards in all_rewards:    
+        all_dis_rewards.append(discounted_rewards(epi_rewards,discount_rate))
     
     flat_all_rewards = np.concatenate(all_dis_rewards)
     mean = np.mean(flat_all_rewards)
@@ -141,9 +141,6 @@ if __name__ == '__main__':
     neurons_per_hiddenlayer_li = [4]
     
     action,gradients,gradient_placeholders,training_op,x_ph = neural_net_policy(no_inputs,neurons_per_hiddenlayer_li,learning_rate)
-    
-    #print("grads and vars".center(50,'-'))
-    #print(grads_vars)
     
     
     # defining cartpole game parameters
@@ -166,7 +163,7 @@ if __name__ == '__main__':
                 
                 for step in range(max_steps_per_episode):                
                     ac,gr = sess.run([action,gradients],feed_dict={x_ph:obs.reshape(1,len(obs))})                    
-                    obs,reward,done,info = env.step(ac)
+                    obs,reward,done,info = env.step(ac[0][0])
                     env.render()
                     
                     current_rewards.append(reward)
@@ -186,7 +183,7 @@ if __name__ == '__main__':
                 mean_grad = np.mean(
                         [ all_rewards[epi_idx][step]* all_gradients[epi_idx][step][grad_idx] 
                          for epi_idx,epi_rewards in enumerate(all_rewards)
-                            for step,reward in range(epi_rewards)]
+                            for step,reward in enumerate(epi_rewards)]
                         ,axis=0)
                 training_feed[grad_placeholder] = mean_grad
             
