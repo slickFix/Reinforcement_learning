@@ -100,6 +100,30 @@ def neural_net_policy(no_inputs,neurons_per_hiddenlayer_li,lr):
     training_op = optimizer.apply_gradients(grads_vars_feed)
     
     return action,gradients,gradient_placeholders,training_op
+
+
+def discounted_rewards(epi_rewards,discount_rate):
+    dis_epi_reward = []
+    cumul_reward = 0 
+    
+    for reward in reversed(epi_rewards):
+        cumul_reward = reward + cumul_reward *  discount_rate
+        dis_epi_reward.append(cumul_reward)
+       
+    return reversed(dis_epi_reward)
+        
+def normalize_rewards(all_rewards,discount_rate):
+    
+    all_dis_rewards = []
+    for epi_rewards in all_rewards:
+        dis_rewards = discounted_rewards(epi_rewards,discount_rate)
+        all_dis_rewards.append(dis_rewards)
+    
+    flat_all_rewards = np.concatenate(all_dis_rewards)
+    mean = np.mean(flat_all_rewards)
+    std = np.std(flat_all_rewards)
+    
+    return [ (rewards-mean)/std for rewards in all_dis_rewards]
     
 
 if __name__ == '__main__':
@@ -119,6 +143,8 @@ if __name__ == '__main__':
     no_training_epochs = 250
     update_after_episode = 10
     max_steps_per_episode = 1000
+    
+    discount_rate = 0.95
     
     with tf.Session() as sess:
         for epoch in range(no_training_epochs):
@@ -143,7 +169,7 @@ if __name__ == '__main__':
                 all_gradients.append(current_gradients)
              
             
-            all_rewards = normalize_rewards(all_rewards)
+            all_rewards = normalize_rewards(all_rewards,discount_rate)
             
             training_feed = {}
             for grad_idx,grad_placeholder in enumerate(gradient_placeholders):
