@@ -156,11 +156,12 @@ if __name__ == '__main__':
             all_rewards = []
             all_gradients = []
             
-            for ep in range(update_after_episode):
+            totals = []
+            
+            for episode in range(update_after_episode):
                 current_rewards = []
                 current_gradients = []
-                obs = env.reset()
-                
+                obs = env.reset()                
                 for step in range(max_steps_per_episode):                
                     ac,gr = sess.run([action,gradients],feed_dict={x_ph:obs.reshape(1,len(obs))})                    
                     obs,reward,done,info = env.step(ac[0][0])
@@ -171,10 +172,12 @@ if __name__ == '__main__':
                     
                     if done:
                         break
+                
+                totals.append(np.sum(current_rewards))
                 all_rewards.append(current_rewards)
                 all_gradients.append(current_gradients)
              
-            
+            print("Training epoch : ",epoch+1,' mean reward ',np.mean(totals), ' min reward ',np.min(totals),' max reward ',np.max(totals))
             all_rewards = normalize_rewards(all_rewards,discount_rate)
             
             training_feed = {}
