@@ -12,28 +12,28 @@ import numpy as np
 import tensorflow as tf
 
 
-def initialize_var(no_inputs,neurons_per_layer_li):
+def initialize_var(no_inputs,neurons_per_hidderlayer_li):
     
     wt_initializer = tf.contrib.layers.variance_scaling_initializer()
     parameters = {}
     
     with tf.variable_scope('Weights'):
-        for idx,neurons in enumerate(neurons_per_layer_li,1):
+        for idx,neurons in enumerate(neurons_per_hidderlayer_li,1):
             if idx == 1:
                 parameters["w"+str(idx)] = tf.Variable(wt_initializer([no_inputs,neurons]),dtype = tf.float32,name = 'w'+str(idx))
             else:
-                parameters["w"+str(idx)] = tf.Variable(wt_initializer([neurons_per_layer_li[idx-2],neurons]),dtype = tf.float32,name = 'w'+str(idx))
+                parameters["w"+str(idx)] = tf.Variable(wt_initializer([neurons_per_hidderlayer_li[idx-2],neurons]),dtype = tf.float32,name = 'w'+str(idx))
         
-        parameters["w"+str(idx+1)] = tf.Variable(wt_initializer([neurons_per_layer_li[idx-1],1]),dtype = tf.float32,name = 'w'+str(idx+1))
+        parameters["w"+str(idx+1)] = tf.Variable(wt_initializer([neurons_per_hidderlayer_li[idx-1],1]),dtype = tf.float32,name = 'w'+str(idx+1))
     
     with tf.variable_scope('Bias'):
-        for idx,neurons in enumerate(neurons_per_layer_li,1):
+        for idx,neurons in enumerate(neurons_per_hidderlayer_li,1):
             if idx == 1:
                 parameters["b"+str(idx)] = tf.Variable(np.zeros([no_inputs,neurons]),dtype = tf.float32,name = 'b'+str(idx))
             else:
-                parameters["b"+str(idx)] = tf.Variable(np.zeros([neurons_per_layer_li[idx-2],neurons]),dtype = tf.float32,name = 'b'+str(idx))
+                parameters["b"+str(idx)] = tf.Variable(np.zeros([neurons_per_hidderlayer_li[idx-2],neurons]),dtype = tf.float32,name = 'b'+str(idx))
         
-        parameters["b"+str(idx+1)] = tf.Variable(np.zeros([neurons_per_layer_li[idx-1],1]),dtype = tf.float32,name = 'b'+str(idx+1))
+        parameters["b"+str(idx+1)] = tf.Variable(np.zeros([neurons_per_hidderlayer_li[idx-1],1]),dtype = tf.float32,name = 'b'+str(idx+1))
       
     return parameters
         
@@ -62,14 +62,14 @@ def cost_optimizer(y,logits,lr):
     
     return cost,optimizer
     
-def neural_net_policy(no_inputs,neurons_per_layer_li,lr):
+def neural_net_policy(no_inputs,neurons_per_hiddenlayer_li,lr):
     
     
     # defining placeholders
     x_ph = tf.placeholder(tf.float32,shape=[None,no_inputs],name = 'x_ph')
     
     # variables initialization
-    parameters = initialize_var(no_inputs,neurons_per_layer_li)
+    parameters = initialize_var(no_inputs,neurons_per_hiddenlayer_li)
     
     # defining forward propagation
     logits = forward_prop(x_ph,parameters)
@@ -87,6 +87,10 @@ def neural_net_policy(no_inputs,neurons_per_layer_li,lr):
     
     # defining gradients
     grads_vars = optimizer.compute_gradients(cost)
+    
+    gradients = [grad for grad,var in grads_vars]
+    
+    
     
     
 
