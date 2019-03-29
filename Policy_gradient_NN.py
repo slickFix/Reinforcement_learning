@@ -77,21 +77,29 @@ def neural_net_policy(no_inputs,neurons_per_hiddenlayer_li,lr):
     # defining actions and y_labels
     output = tf.sigmoid(logits)    
     p_left_right = tf.concat([output,1-output],axis=1)
-    actions = tf.multinomial(tf.log(p_left_right),num_samples=1) 
+    action = tf.multinomial(tf.log(p_left_right),num_samples=1) 
     
         #if we have output close to 1 => p_left is higher hence action will be 0(index) we reverse this in below code
-    y = 1-tf.to_float(actions) # we use (1-actions) because output measures the prob of left action
+    y = 1-tf.to_float(action) # we use (1-actions) because output measures the prob of left action
     
     # defining cost and optimizer
     cost,optimizer = cost_optimizer(y,logits,lr)
     
     # defining gradients
-    grads_vars = optimizer.compute_gradients(cost)
-    
+    grads_vars = optimizer.compute_gradients(cost)    
     gradients = [grad for grad,var in grads_vars]
     
+    # creating gradients placeholder
+    grads_vars_feed = []
+    gradient_placeholders = []
+    for grad,var in grads_vars:
+        grad_placeholder = tf.placeholder(tf.float32,shape=grad.get_shape())
+        gradient_placeholders.append(grad_placeholder)
+        grads_vars_feed.append((grad_placeholder,var))
+        
+    training_op = optimizer.apply_gradients(grads_vars_feed)
     
-    
+    return action,gradients,training_op
     
 
 if __name__ == '__main__':
