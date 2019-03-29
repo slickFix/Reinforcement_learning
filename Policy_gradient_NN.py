@@ -99,7 +99,7 @@ def neural_net_policy(no_inputs,neurons_per_hiddenlayer_li,lr):
         
     training_op = optimizer.apply_gradients(grads_vars_feed)
     
-    return action,gradients,training_op
+    return action,gradients,gradient_placeholders,training_op
     
 
 if __name__ == '__main__':
@@ -109,8 +109,71 @@ if __name__ == '__main__':
     
     
     # defining neural network
+    learning_rate = 0.01
+    no_inputs = len(env.reset())
+    neurons_per_hiddenlayer_li = [4]
+    
+    action,gradients,gradient_placeholders,training_op = neural_net_policy(no_inputs,neurons_per_hiddenlayer_li,learning_rate)
+    
+    # defining cartpole game parameters
+    no_training_epochs = 250
+    update_after_episode = 10
+    max_steps_per_episode = 1000
+    
+    with tf.Session() as sess:
+        for epoch in range(no_training_epochs):
+            all_rewards = []
+            all_gradients = []
+            
+            for ep in range(update_after_episode):
+                current_rewards = []
+                current_gradients = []
+                obs = env.reset()
+                
+                for step in range(max_steps_per_episode):                
+                    ac,gr = sess.run([action,gradients],feed_dict=obs.reshape((1,len(obs))))                    
+                    obs,reward,done,info = env.step(ac)
+                    
+                    current_rewards.append(reward)
+                    current_gradients.append(gr)
+                    
+                    if done:
+                        break
+                all_rewards.append(current_rewards)
+                all_gradients.append(current_gradients)
+             
+            
+            all_rewards = normalize_rewards(all_rewards)
+            
+            training_feed = {}
+            for grad_idx,grad_placeholder in enumerate(gradient_placeholders):
+                
+                mean_grad = np.mean(
+                        [ all_rewards[epi_idx][step]* all_gradients[epi_idx][step][grad_idx] 
+                         for epi_idx,epi_rewards in enumerate(all_rewards)
+                            for step,reward in range(epi_rewards)]
+                        ,axis=0)
+                training_feed[grad_placeholder] = mean_grad
+            
+            # training NN with modified gradients                
+            sess.run(training_op,feed_dict=training_feed)
     
     
-
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
         
         
