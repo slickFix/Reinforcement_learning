@@ -31,5 +31,25 @@ R = np.array([
            ])
 
 # possible actions
-possible_actions = [[0,1,2],[0,2][1]]
+possible_actions = [[0,1,2],[0,2],[1]]
 
+# Running Q Value iteration alogrithm
+
+Q = np.full((3,3),-np.inf)
+
+for state,actions in enumerate(possible_actions):
+    Q[state,actions] = 0.0
+    
+learning_rate = 0.01
+discount_rate = 0.95
+n_iterations = 100
+
+for iteration in range(n_iterations):
+    Q_prev = Q.copy()
+    for s in range(3):
+        for a in possible_actions[s]:            
+            Q[s,a] = np.sum([
+                    T[s,a,sp]*(R[s,a,sp]+discount_rate*np.max(Q_prev[sp])) for sp in range(3)
+                    ])
+    
+print(Q)
