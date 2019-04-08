@@ -39,7 +39,7 @@ Q = np.full((3,3),-np.inf)
 
 for state,actions in enumerate(possible_actions):
     Q[state,actions] = 0.0
-    
+print(Q)    
 learning_rate = 0.01
 discount_rate = 0.95
 n_iterations = 100
