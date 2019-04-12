@@ -31,7 +31,6 @@ R = np.array([
         [[nan,nan,nan],[40,0,0],[nan,nan,nan]]
            ])
 
-
 s = 0 # start in state 0
 
 Q = np.full((3,3),-np.inf)  # -inf for impossible actions
@@ -41,11 +40,16 @@ possible_actions = [[0,1,2],[0,2],[1]]
 
 for state,actions in enumerate(possible_actions):
     Q[state,actions] = 0.0   # initial value = 0.0 for all possible actions
-    
-print(Q)
-    
+
+print("T",T)    
+print("Q",Q)
+print("T.shape",T.shape)
+print("Q.shape",Q.shape)    
+
+print(list(range(3)))
+
 for iteration in range(n_iterations):
-    a = rnd.choice(possible_actions)  # choose an action(randomly)
+    a = rnd.choice(possible_actions[s])  # choose an action(randomly)
     sp = rnd.choice(range(3),p = T[s,a]) # pick next state using T[s,a]
     
     reward = R[s,a,sp]
