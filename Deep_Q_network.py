@@ -10,6 +10,7 @@ import gym
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.layers import convolution2d,fully_connected
+from collections import deque
 
 # =============================================================================
 # ## Defining the game playing environment
@@ -82,3 +83,57 @@ critic_q_values,critic_vars = q_network(X_state,'q_networks/critic')
 
 copy_ops = [actor_var.assign(critic_vars[var_name]) for var_name,actor_var in actor_vars.items()]
 copy_critic_to_actor = tf.group(*copy_ops)
+
+
+# =============================================================================
+# ## Final construction phase
+# =============================================================================
+
+X_action = tf.placeholder(tf.int32,shape = [None])
+q_value = tf.reduce_mean(critic_q_values*tf.one_hot(X_action,n_outputs),axis=1,keep_dims=True)
+
+y = tf.placeholder(tf.float32,shape=[None,1])
+cost = tf.reduce_mean(tf.square(y-q_value))
+global_step = tf.Variable(0,trainable=False,name='global_step')
+optimizer = tf.train.AdamOptimizer(learning_rate)
+training_op = optimizer.minimize(cost,global_step=global_step)
+
+init = tf.global_variables_initializer()
+saver = tf.train.Saver()
+
+# =============================================================================
+# ## Utiliy functions
+# =============================================================================
+
+replay_memory_size = 10000
+replay_memory = deque([],maxlen = replay_memory_size)
+
+def sample_memories(batch_size):
+    indices = np.random.permutation(len(replay_memory))[:batch_size]
+    
+    cols = [[],[],[],[],[]] #state #action #rewqrd # next_state #continue
+    
+    for idx in indices:
+        memory = replay_memory[idx]
+        
+        for col,value in zip(cols,memory):
+            col.append(value)
+        
+    cols =  [np.array(col) for col in cols]
+        
+    return (cols[4],cols[1],cols[2].reshape(-1,1),cols[3],cols[4].reshape(-1,1))
+
+
+eps_min  = 0.05
+eps_max = 1.00
+
+eps_decay_steps = 50000
+
+def epsilon_greedy(q_values,step):
+    epsilon = max(eps_min,eps_max-(eps_max-eps_min)*step/eps_decay_steps)
+    
+    if np.random.rand() < epsilon:
+        return np.random.randint(n_outputs)  #random action
+    else:
+        return np.argmax(q_values)  #optimal action
+    
