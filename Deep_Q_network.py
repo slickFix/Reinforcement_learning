@@ -11,21 +11,32 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.layers import convolution2d,fully_connected
 
+# =============================================================================
+# ## Defining the game playing environment
+# =============================================================================
 
 env = gym.make("MsPacman-v0")
 obs = env.reset()
+#env.render()
 obs.shape
 env.action_space
 
 mspacman_color = np.array([210,164,74]).mean()
 
+
+# =============================================================================
+# ## Preprocessing the ms pacman image
+# =============================================================================
 def preprocess_observation(obs):
     img = obs[1:176:2, ::2] # crop and downsize
     img = img.mean(axis = 2) # to greyscale
     img[img  == mspacman_color] = 0 # improve contrast
     img = (img-128)/128-1 # normalize from -1 to 1
     return img.reshape(88,80,1)
-
+ 
+# =============================================================================
+# ## Defining the network and network paramerters
+# =============================================================================
 input_height = 88
 input_width = 80
 input_channels = 1
