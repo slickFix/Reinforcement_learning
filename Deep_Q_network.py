@@ -70,3 +70,15 @@ def q_network(X_state,scope):
     trainable_vars_by_name = {var.name[len(scope.name):]:var for var in trainable_vars}
     
     return outputs, trainable_vars_by_name
+
+
+# =============================================================================
+# ## Creating two(actor and critic) Deep_Q_Networks, placeholder and copy operation
+# =============================================================================
+
+X_state = tf.placeholder(tf.float32,shape = [None,input_height,input_width,input_channels])
+actor_q_values,actor_vars = q_network(X_state,'q_networks/actor')
+critic_q_values,critic_vars = q_network(X_state,'q_networks/critic')
+
+copy_ops = [actor_var.assign(critic_vars[var_name]) for var_name,actor_var in actor_vars.items()]
+copy_critic_to_actor = tf.group(*copy_ops)
