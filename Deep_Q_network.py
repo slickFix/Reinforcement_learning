@@ -6,6 +6,7 @@ Created on Sat Apr 13 13:46:32 2019
 @author: siddharth
 """
 
+import os
 import gym
 import numpy as np
 import tensorflow as tf
@@ -136,4 +137,72 @@ def epsilon_greedy(q_values,step):
         return np.random.randint(n_outputs)  #random action
     else:
         return np.argmax(q_values)  #optimal action
+    
+# =============================================================================
+# ## Execution Phase
+# =============================================================================
+
+n_steps = 100000  # total number of training steps
+training_start = 1000  # start training after 1000 game iterations
+training_interval = 3  # run a training step every 3 game iterations
+save_steps = 50  # save the model every 50 training steps
+copy_steps = 25  # copy the critic to actor after every 25 training steps
+discount_rate = 0.95
+skip_start = 90  # skip the start of every new game ( it's just the waiting time)
+batch_size = 50
+iteration = 0 # game iterations
+checkpoint_path = "./msPacman/my_dqn.ckpt"
+done = True  # env needs to be reset
+
+
+with tf.Session() as sess:
+    if os.path.isfile(checkpoint_path):
+        saver.restore(sess,checkpoint_path)
+    else:
+        init.run()
+    while True:
+        step = global_step.eval()
+        if step>=n_steps:
+            break
+        iteration+=1
+        
+        if done:  # game over start again
+            obs = env.reset()
+            for skip in range(skip_start):   # skip the start of each game
+                obs,reward,done,info = env.step(0)
+            state = preprocess_observation(obs)
+            
+        # Actor evaluates what to do 
+        q_values = actor_q_values.eval(feed_dict ={X_state:[state]})
+        action = epsilon_greedy(q_values,step)
+        
+        # Actor plays
+        obs,reward,done,info = env.step(action)
+        next_state = preprocess_observation(obs)
+        
+        # Memorize what happened
+        replay_memory.append((state,action,reward,next_state,1,0-done))
+        state = next_state
+        
+        if iteration < training_start or  iteration % training_interval !=0:
+            continue
+        
+        # Critic learns
+        X_state_val,X_action_val,rewards,X_next_state_val,continues = ( sample_memories(batch_size))
+        
+        next_q_values = actor_q_values.eval(feed_dict = {X_state:X_next_state_val})
+        max_next_q_values = np.max(next_q_values,axis = 1,keepdims = True)
+        y_val = rewards + continues* discount_rate * max_next_q_values
+        training_op.run(feed_dict={X_state:X_state_val,
+                                   X_action:X_action_val,y:y_val})
+    
+        # Regularly copy critic to actor
+        if step % copy_steps == 0 :
+            copy_critic_to_actor.run()
+            
+        # And save regularly
+        if step % save_steps ==0:
+            saver.save(sess,checkpoint_path)
+            
+        
     
