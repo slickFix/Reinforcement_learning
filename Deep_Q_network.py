@@ -49,6 +49,7 @@ conv_paddings = ["SAME"]*3
 conv_activation = [tf.nn.relu]*3
 n_hidden_in = 64*11*10 # conv3  has 64 maps of 11*10 each
 n_hidden = 512
+learning_rate = 0.0001
 
 hidden_activation = tf.nn.relu
 n_outputs = env.action_space.n  # 9 discrete actions are available
@@ -59,13 +60,13 @@ def q_network(X_state,scope):
     conv_layers = [] 
     with tf.variable_scope(scope) as scope:
         for n_maps, kernel_size,stride,padding,activation in zip(conv_n_maps,conv_kernel_sizes,conv_strides,conv_paddings,conv_activation):
-            prev_layer = convolution2d(prev_layer,num_outputs=n_maps,kernel_size=kernel_size,stride=stride,padding=padding,activation_fn=activation,weights_regularizer=initializer)
+            prev_layer = convolution2d(prev_layer,num_outputs=n_maps,kernel_size=kernel_size,stride=stride,padding=padding,activation_fn=activation,weights_initializer=initializer)
             conv_layers.append(prev_layer)
             
         last_conv_layer_flat = tf.reshape(prev_layer,shape=[-1,n_hidden_in])
         hidden = fully_connected(
-                 last_conv_layer_flat,n_hidden,activation_fn=hidden_activation,weights_regularizer=initializer)
-        outputs = fully_connected(hidden,n_outputs,activation_fn=None,weights_regularizer=initializer)
+                 last_conv_layer_flat,n_hidden,activation_fn=hidden_activation,weights_initializer=initializer)
+        outputs = fully_connected(hidden,n_outputs,activation_fn=None,weights_initializer=initializer)
         
     trainable_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,scope = scope.name)
     
@@ -122,7 +123,7 @@ def sample_memories(batch_size):
         
     cols =  [np.array(col) for col in cols]
         
-    return (cols[4],cols[1],cols[2].reshape(-1,1),cols[3],cols[4].reshape(-1,1))
+    return (cols[0],cols[1],cols[2].reshape(-1,1),cols[3],cols[4].reshape(-1,1))
 
 
 eps_min  = 0.05
@@ -162,6 +163,7 @@ with tf.Session() as sess:
         init.run()
     while True:
         step = global_step.eval()
+        print(step,end=" ")
         if step>=n_steps:
             break
         iteration+=1
@@ -203,6 +205,5 @@ with tf.Session() as sess:
         # And save regularly
         if step % save_steps ==0:
             saver.save(sess,checkpoint_path)
-            
-        
+                
     
